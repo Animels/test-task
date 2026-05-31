@@ -1,0 +1,36 @@
+{
+  "name": "test-task",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "tsx main.ts",
+    "test": "jest --config jest.config.cjs"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "pg": "^8.21.0",
+    "reflect-metadata": "^0.2.2",
+    "swagger-ui-express": "^5.0.1",
+    "tsoa": "^7.0.0-alpha.0",
+    "vite-node": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.9.1",
+    "@types/pg": "^8.20.0",
+    "@types/swagger-ui-express": "^4.1.8",
+    "jest": "^30.4.2",
+    "prisma": "^7.8.0",
+    "ts-jest": "^29.4.11",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  }
+}

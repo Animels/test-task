@@ -1,0 +1,49 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "./types"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Users {
+  id          Int          @id @default(autoincrement())
+  preferences Preferences?
+  region      Region       @relation(fields: [regionId], references: [id])
+  regionId    Int
+}
+
+model Preferences {
+  id               Int      @id @default(autoincrement())
+  user             Users    @relation(fields: [userId], references: [id])
+  userId           Int      @unique
+  enabled          String[]
+  timezone         String   @default("UTC")
+  quie_hours_start DateTime? @db.Time
+  quie_hours_end   DateTime? @db.Time
+}
+
+model Channels {
+  id      Int    @id @default(autoincrement())
+  channel String @unique
+}
+
+model Region {
+  id       Int        @id @default(autoincrement())
+  name     String
+  policies Policies[]
+  users    Users[]
+}
+
+model Policies {
+  id       Int    @id @default(autoincrement())
+  region   Region @relation(fields: [regionId], references: [id])
+  regionId Int
+  type     String[]
+}

@@ -1,0 +1,546 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Notification Preferences API",
+    "version": "1.0.0",
+    "description": "API for managing user notification preferences and evaluating notification delivery"
+  },
+  "components": {
+    "schemas": {
+      "Channel": {
+        "type": "string",
+        "enum": ["email", "sms", "push", "in-app"]
+      },
+      "ChannelType": {
+        "type": "string",
+        "enum": ["marketing", "system"]
+      },
+      "PolicyType": {
+        "type": "string",
+        "enum": [
+          "email_marketing", "email_system",
+          "sms_marketing", "sms_system",
+          "push_marketing", "push_system",
+          "in-app_marketing", "in-app_system"
+        ]
+      },
+      "Decision": {
+        "type": "string",
+        "enum": ["allow", "deny"]
+      },
+      "Reason": {
+        "type": "string",
+        "enum": ["quiet_hours", "channel_disabled", "policy_violation"]
+      },
+      "ChannelRecord": {
+        "type": "object",
+        "required": ["id", "channel"],
+        "properties": {
+          "id": { "type": "integer" },
+          "channel": { "$ref": "#/components/schemas/Channel" }
+        }
+      },
+      "PolicyRecord": {
+        "type": "object",
+        "required": ["id", "regionId", "type"],
+        "properties": {
+          "id": { "type": "integer" },
+          "regionId": { "type": "integer" },
+          "type": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PolicyType" }
+          }
+        }
+      },
+      "RegionRecord": {
+        "type": "object",
+        "required": ["id", "name", "policies"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "policies": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PolicyRecord" }
+          }
+        }
+      },
+      "PreferenceRecord": {
+        "type": "object",
+        "required": ["id", "userId", "enabled", "timezone"],
+        "properties": {
+          "id": { "type": "integer" },
+          "userId": { "type": "integer" },
+          "enabled": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PolicyType" }
+          },
+          "timezone": { "type": "string", "example": "Europe/Moscow" },
+          "quie_hours_start": { "type": "string", "format": "date-time", "nullable": true },
+          "quie_hours_end": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "UserRecord": {
+        "type": "object",
+        "required": ["id", "regionId", "region"],
+        "properties": {
+          "id": { "type": "integer" },
+          "regionId": { "type": "integer" },
+          "region": { "$ref": "#/components/schemas/RegionRecord" },
+          "preferences": {
+            "allOf": [{ "$ref": "#/components/schemas/PreferenceRecord" }],
+            "nullable": true
+          }
+        }
+      },
+      "PreferenceInput": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PolicyType" }
+          },
+          "timezone": { "type": "string", "example": "Europe/Moscow" },
+          "quietHoursStart": { "type": "string", "format": "date-time", "nullable": true },
+          "quietHoursEnd": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "PreferenceCreate": {
+        "type": "object",
+        "required": ["userId", "enabled", "timezone"],
+        "properties": {
+          "userId": { "type": "integer" },
+          "enabled": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PolicyType" }
+          },
+          "timezone": { "type": "string", "example": "UTC" },
+          "quietHoursStart": { "type": "string", "format": "date-time", "nullable": true },
+          "quietHoursEnd": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "Notification": {
+        "type": "object",
+        "required": ["userId", "channel", "type", "timestamp"],
+        "properties": {
+          "userId": { "type": "integer" },
+          "channel": { "$ref": "#/components/schemas/Channel" },
+          "type": { "$ref": "#/components/schemas/ChannelType" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "EvaluationResult": {
+        "type": "object",
+        "required": ["decision", "reasons"],
+        "properties": {
+          "decision": { "$ref": "#/components/schemas/Decision" },
+          "reasons": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Reason" }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/users/{id}": {
+      "get": {
+        "summary": "Get user by ID",
+        "tags": ["Users"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "User found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserRecord" } } }
+          },
+          "404": {
+            "description": "User not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update user region",
+        "tags": ["Users"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["regionId"],
+                "properties": { "regionId": { "type": "integer" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserRecord" } } }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "summary": "Get all users",
+        "tags": ["Users"],
+        "responses": {
+          "200": {
+            "description": "List of all users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/UserRecord" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create user",
+        "tags": ["Users"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["regionId"],
+                "properties": { "regionId": { "type": "integer" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserRecord" } } }
+          }
+        }
+      }
+    },
+    "/preferences/{userId}": {
+      "get": {
+        "summary": "Get user preferences",
+        "tags": ["Preferences"],
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Preferences found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PreferenceRecord" } } }
+          },
+          "404": {
+            "description": "Preference not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update user preferences",
+        "tags": ["Preferences"],
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PreferenceInput" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Preferences updated",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PreferenceRecord" } } }
+          }
+        }
+      }
+    },
+    "/preferences": {
+      "post": {
+        "summary": "Create user preferences",
+        "tags": ["Preferences"],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PreferenceCreate" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Preferences created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PreferenceRecord" } } }
+          }
+        }
+      }
+    },
+    "/evaluate": {
+      "post": {
+        "summary": "Evaluate whether a notification should be delivered",
+        "tags": ["Evaluation"],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Notification" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Evaluation result",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EvaluationResult" } } }
+          },
+          "404": {
+            "description": "User not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/regions/{id}": {
+      "get": {
+        "summary": "Get region by ID",
+        "tags": ["Regions"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Region found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegionRecord" } } }
+          },
+          "404": {
+            "description": "Region not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update region name",
+        "tags": ["Regions"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": { "name": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Region updated",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegionRecord" } } }
+          }
+        }
+      }
+    },
+    "/regions": {
+      "post": {
+        "summary": "Create region",
+        "tags": ["Regions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": { "name": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Region created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegionRecord" } } }
+          }
+        }
+      }
+    },
+    "/channels/{channel}": {
+      "get": {
+        "summary": "Get channel by name",
+        "tags": ["Channels"],
+        "parameters": [
+          { "name": "channel", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Channel" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Channel found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChannelRecord" } } }
+          },
+          "404": {
+            "description": "Channel not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/channels/{id}": {
+      "put": {
+        "summary": "Update channel",
+        "tags": ["Channels"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["channel"],
+                "properties": { "channel": { "$ref": "#/components/schemas/Channel" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Channel updated",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChannelRecord" } } }
+          }
+        }
+      }
+    },
+    "/channels": {
+      "post": {
+        "summary": "Create channel",
+        "tags": ["Channels"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["channel"],
+                "properties": { "channel": { "$ref": "#/components/schemas/Channel" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Channel created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChannelRecord" } } }
+          }
+        }
+      }
+    },
+    "/policies/{id}": {
+      "get": {
+        "summary": "Get policy by ID",
+        "tags": ["Policies"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Policy found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PolicyRecord" } } }
+          },
+          "404": {
+            "description": "Policy not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update policy types",
+        "tags": ["Policies"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["types"],
+                "properties": {
+                  "types": {
+                    "type": "array",
+                    "items": { "$ref": "#/components/schemas/PolicyType" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Policy updated",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PolicyRecord" } } }
+          }
+        }
+      }
+    },
+    "/policies/region/{regionId}": {
+      "get": {
+        "summary": "Get policies by region",
+        "tags": ["Policies"],
+        "parameters": [
+          { "name": "regionId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Policies for region",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/PolicyRecord" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/policies": {
+      "post": {
+        "summary": "Create policy",
+        "tags": ["Policies"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["regionId", "types"],
+                "properties": {
+                  "regionId": { "type": "integer" },
+                  "types": {
+                    "type": "array",
+                    "items": { "$ref": "#/components/schemas/PolicyType" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Policy created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PolicyRecord" } } }
+          }
+        }
+      }
+    }
+  }
+}
